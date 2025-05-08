@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>на оценку</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <style>
+        body {
+            font-family: "Pixelify Sans", sans-serif;
+            background-color: #808080;
+        }
+        .question {
+            text-align: center;
+            font-size: 70px;
+            margin-top: 110px;
+        }
+        .answer {
+            border: solid 3px black;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 30px;
+            border-radius: 5px;
+            margin: 0 9px;
+        }
+        .answers {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .answer:hover {
+            font-size: 35px;
+            transition: 0.2s;
+            transform: scale(1.2);
+        }
+        h1 {
+            text-align: center;
+            font-size: 50px;
+            padding-top: 15px;
+        }
+        .correct, .incorrect {
+            margin: 10px;
+        }
+        .grade {
+            text-align: center;
+            font-size: 28px;
+            margin-top: 20px;
+            display: none;
+        }
+        .restart {
+            font-family: Pixelify Sans;
+            background-color: grey;
+            margin: 20px auto 0 auto;
+            padding: 10px 20px;
+            font-size: 23px;
+            color: black;
+            cursor: pointer;
+            display: none;
+            text-align: center;
+        }
+        .restart:hover {
+            font-size: 35px;
+            transition: 0.2s;
+            transform: scale(1.2);
+        }
+        .timer {
+            
+        }
+    </style>
+</head>
+<body>
+    <h2 class="correct">Правильных ответов: 0</h2>
+    <h2 class="incorrect">Неправильных ответов: 0</h2>
+    <h2 class="timer"> Время: 0:00</h2>
+    <h1>МАТЕМАТИЧЕСКИЙ ТРЕНАЖЕР</h1>
+    <h1 class="question">4 * 4</h1>
+    <div class="answers">
+        <div class="answer">1</div>
+        <div class="answer">2</div>
+        <div class="answer">3</div>
+        <div class="answer">4</div>
+        <div class="answer">5</div>
+    </div>
+    <h2 class="grade"></h2>
+    <button class="restart">Начать заново</button>
+
+    <script>
+        const question_field = document.querySelector(".question");
+        const answers_buttons = document.querySelectorAll(".answer");
+        const correct_field = document.querySelector(".correct");
+        const incorrect_field = document.querySelector(".incorrect");
+        const grade_field = document.querySelector(".grade");
+        const restart_button = document.querySelector(".restart");
+        const timer_field = document.querySelector(".timer");
+
+        const signs = ["+", "-", "*", "/"];
+        let correct_count = 0;
+        let incorrect_count = 0;
+        let current_question;
+        let timer = 0;
+        let timerInterval = null;
+
+        function randint(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        class Question {
+            constructor() {
+                this.number1 = randint(1, 30);
+                this.number2 = randint(1, 30);
+                this.sign = signs[randint(0, 3)];
+                this.question = `${this.number1} ${this.sign} ${this.number2}`;
+
+                if (this.sign === "+") {
+                    this.correct = this.number1 + this.number2;
+                } else if (this.sign === "-") {
+                    this.correct = this.number1 - this.number2;
+                } else if (this.sign === "*") {
+                    this.correct = this.number1 * this.number2;
+                } else {
+                    this.correct = Math.floor(this.number1 / this.number2);
+                    this.number1 = this.correct * this.number2;
+                    this.question = `${this.number1} / ${this.number2}`;
+                }
+
+                this.answers = [this.correct];
+                const used = new Set(this.answers);
+                while (this.answers.length < 5) {
+                    let wrong = this.correct + randint(-10, 10);
+                    if (wrong !== this.correct && !used.has(wrong)) {
+                        this.answers.push(wrong);
+                        used.add(wrong);
+                    }
+                }
+                shuffle(this.answers);
+            }
+
+            display() {
+                question_field.textContent = this.question;
+                answers_buttons.forEach((btn, i) => {
+                    btn.textContent = this.answers[i];
+                    btn.style.backgroundColor = "#808080";
+                });
+            }
+        }
+
+        function updateStats() {
+            correct_field.textContent = `Правильных ответов: ${correct_count}`;
+            incorrect_field.textContent = `Неправильных ответов: ${incorrect_count}`;
+        }
+
+        function endGame() {
+            stopTimer();
+            restart_button.style.display = "block";
+            document.querySelector(".answers").style.display = "none";
+        } 
+
+        function resetGame() {
+            correct_count = 0;
+            incorrect_count = 0;
+            updateStats();
+            grade_field.style.display = "none";
+            restart_button.style.display = "none";
+            document.querySelector(".answers").style.display = "flex";
+            startTimer();
+            current_question = new Question();
+            current_question.display();
+        }
+
+        function startTimer() {
+            timer = 0;
+            timer_field.textContent = `Время: 0:00`;
+            timerInterval = setInterval(() => {
+                timer++;
+                const hours = Math.floor(timer / 3600);
+                const minutes = Math.floor((timer % 3600) / 60);
+                const seconds = timer % 60;
+                timer_field.textContent = `Время: ${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        answers_buttons.forEach(btn => {
+            btn.addEventListener("click", function () {
+                const chosen = Number(btn.textContent);
+                if (chosen === current_question.correct) {
+                    btn.style.backgroundColor = "#00de37";
+                    correct_count++;
+                } else {
+                    btn.style.backgroundColor = "#ff0000";
+                    incorrect_count++;
+                }
+
+                anime({
+                    targets: btn,
+                    duration: 300,
+                    delay: 400,
+                    easing: "linear",
+                    backgroundColor: "#808080",
+                });
+
+                updateStats();
+
+                if (incorrect_count >= 50) {
+                    setTimeout(endGame, 800);
+                } else {
+                    setTimeout(() => {
+                        current_question = new Question();
+                        current_question.display();
+                    }, 700);
+                }
+            });
+        });
+
+        restart_button.addEventListener("click", resetGame);
+
+        current_question = new Question();
+        current_question.display();
+        startTimer();
+    </script>
+</body>
+</html>
